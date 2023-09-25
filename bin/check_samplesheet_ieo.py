@@ -116,8 +116,11 @@ def check_samplesheet(file_in, file_out):
                 print("Proceed with specified lanes:")
                 # in here we need to split by common partial match:
                 # Important the Lanes must be in the folder specified!
-                search = "./**/*"+rid+"*"+sid+'*'
-                fastqs = list(p.rglob(search))
+
+                subfolders = list(p.glob("*"+rid+"*"+sid+"*"))
+                search = '*fastq.gz'
+                fastqs = list(subfolders[0].glob('./' + search))
+
                 if len(fastqs) == 0:
                     print_error(
                             f"The path provided does not contain the files as RID+SID",
@@ -127,10 +130,10 @@ def check_samplesheet(file_in, file_out):
                 
                 for ll in lanes:
                     print(ll)
-                    search = "./**/*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
-                    fastqs_1 = list(p.rglob(search))
-                    search = "./**/*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
-                    fastqs_2 = list(p.rglob(search))
+                    search = "*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
+                    fastqs_1 = list(subfolders[0].glob(search))
+                    search = "*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
+                    fastqs_2 = list(subfolders[0].glob(search))
                     
                     # check if fastqs_1 is not empty
                     if len(fastqs_1) > 0:
@@ -167,8 +170,9 @@ def check_samplesheet(file_in, file_out):
             elif all(x=='any' for (x) in lanes):
                 print("Proceed with all lanes:")
                 # we need to get to the unique elements of "Lanes"
-                search = "./**/*"+rid+"*"+sid+'*R1*fastq.gz'
-                fastqs = list(p.rglob(search))
+                subfolders = list(p.glob("*"+rid+"*"+sid+"*"))
+                search = '*R1*fastq.gz'
+                fastqs = list(subfolders[0].glob('./' + search))
                 fastqs = [ re.sub(r'^.*?_L', 'L', str(x)).split('_')[0] for x in fastqs]
                 
                 if len(fastqs) == 0:
@@ -180,10 +184,10 @@ def check_samplesheet(file_in, file_out):
                     
                 for ll in fastqs:
                     print(ll)
-                    search = "./**/*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
-                    fastqs_1 = list(p.rglob(search))
-                    search = "./**/*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
-                    fastqs_2 = list(p.rglob(search))
+                    search = "*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
+                    fastqs_1 = list(subfolders[0].glob(search))
+                    search = "*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
+                    fastqs_2 = list(subfolders[0].glob(search))
                     
                     # check if fastqs_1 is not empty
                     if len(fastqs_1) > 0:

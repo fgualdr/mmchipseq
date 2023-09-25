@@ -325,9 +325,6 @@ workflow CHIPSEQ {
         ch_deeptoolsplotfingerprint_multiqc = DEEPTOOLS_PLOTFINGERPRINT.out.matrix
         ch_versions = ch_versions.mix(DEEPTOOLS_PLOTFINGERPRINT.out.versions.first())
     }
-
-
-    
     
     if(!ch_with_inputs){
 
@@ -539,7 +536,7 @@ workflow CHIPSEQ {
         }
         .set { ch_antibody_peaks }
     
-
+    ch_antibody_peaks.view()
     //
     //  MODULE: Generate consensus peaks across samples
     //  Consider modifying this: i.e. Merge by condition - using IDR score any peak coming out of this will be a true potential peak
@@ -650,7 +647,17 @@ workflow CHIPSEQ {
 
     ch_deeptoolsplotprofile_multiqc = Channel.empty()
     // DEEPTOOLS_BIGWIG_NORM.out.bigwig && !DEEPTOOLS_BIGWIG_NORM.out.bigwig.ifEmpty([])
-    if ( params.normalize) {
+    // execute the below only if params.normalize is false i.e. !params.normalize OR we have one sample OR ch_size_factors is empty
+    //
+    // Scale to depth of sequencing using Deeptools:
+    // 
+    DEEPTOOLS_BIGWIG (
+        ch_genome_bam_bai
+    )
+    ch_versions = ch_versions.mix(DEEPTOOLS_BIGWIG.out.versions.first())
+    ch_big_wig = DEEPTOOLS_BIGWIG.out.bigwig
+
+    if ( params.normalize ) {
         //
         // MODULE: BedGraph coverage tracks.
         //
@@ -659,17 +666,7 @@ workflow CHIPSEQ {
         )
         ch_versions = ch_versions.mix(DEEPTOOLS_BIGWIG_NORM.out.versions.first())
         ch_big_wig = DEEPTOOLS_BIGWIG_NORM.out.bigwig
-
-    } else {
-        //
-        // Scale to depth of sequencing using Deeptools:
-        // 
-        DEEPTOOLS_BIGWIG (
-            ch_genome_bam_bai
-        )
-        ch_versions = ch_versions.mix(DEEPTOOLS_BIGWIG.out.versions.first())
-        ch_big_wig = DEEPTOOLS_BIGWIG.out.bigwig
-    }
+    } 
     
     if (!params.skip_plot_profile ) {
 
