@@ -46,10 +46,13 @@
                 "type": "string",
                 "pattern": "^\\S+$",
                 "errorMessage": "Which input to use for peak calling i.e. sample name as: sample'_'replicate specified for a particular sample. if only sample specific it takes any sample matching until '_R' is any specified it combines all inputs if present"
+            },
+            "antibody": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "antibody "
             }
         },
-        "required": ["rid","sid","sample","replicate","path","lanes","is_input","which_input"]
+        "required": ["rid","sid","sample","replicate","path","lanes","is_input","which_input","antibody"]
     }
 }
-
-"rid","sid","sample","replicate","path","lanes","is_input","which_input"

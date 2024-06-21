@@ -72,9 +72,9 @@ class WorkflowMain {
         // Check AWS batch settings
         NfcoreTemplate.awsBatch(workflow, params)
 
-        // Check input has been provided
-        if (!params.input) {
-            log.error "Please provide an input samplesheet to the pipeline e.g. '--input samplesheet.csv'"
+        // Check that either an input samplesheet or public_data_ids have been provided
+        if (!params.input && !params.public_data_ids) {
+            log.error "Please provide an input samplesheet or public_data_ids to the pipeline e.g. '--input samplesheet.csv'"
             System.exit(1)
         }
     }

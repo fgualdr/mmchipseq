@@ -10,7 +10,14 @@
             "type": "object",
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["outdir"],
+            "anyOf": [
+                {
+                    "required": ["input", "outdir"]
+                },
+                {
+                    "required": ["public_data_ids", "outdir"]
+                }
+            ],
             "properties": {
                 "input": {
                     "type": "string",
@@ -20,6 +27,15 @@
                     "schema": "assets/schema_input.json",
                     "description": "Path to comma-separated file containing information about the samples in the experiment.",
                     "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline.",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "public_data_ids": {
+                    "type": "string",
+                    "format": "file-path",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "schema": "assets/schema_input.json to be changed!",
+                    "description": "Path to comma-separated file containing information about the public data to be downloaded.",
                     "fa_icon": "fas fa-file-csv"
                 },
                 "fragment_size": {
@@ -37,7 +53,7 @@
                     "type": "integer",
                     "description": "Read length used to calculate MACS2 genome size for peak calling if `--macs_gsize` isn't provided.",
                     "fa_icon": "fas fa-chart-area",
-                    "enum": [50, 60, 75, 100, 150, 200]
+                    "enum": [36, 50, 60, 75, 76, 100, 150, 200]
                 }, 
                 "outdir": {
                     "type": "string",
@@ -438,7 +454,7 @@
                 },
 
                 "sigma_times": {
-                    "type": "integer",
+                    "type": "number",
                     "default": 1,
                     "description": "Number of sigmas to include invariant features"
                 },
