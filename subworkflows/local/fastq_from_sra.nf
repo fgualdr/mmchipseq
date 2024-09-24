@@ -51,8 +51,8 @@ def check_fastq_files(meta, fastq) {
     def meta_new = [:]
     meta_new.id = meta.id
     meta_new.is_input = meta.is_input
-    meta.which_input   = meta.which_input
-    meta.antibody   = meta.antibody
+    meta_new.which_input   = meta.which_input
+    meta_new.antibody   = meta.antibody
     
     def fastq_meta = []
     println(fastq)

@@ -455,12 +455,12 @@
 
                 "sigma_times": {
                     "type": "number",
-                    "default": 1,
+                    "default": 1.0,
                     "description": "Number of sigmas to include invariant features"
                 },
 
                 "n_pop": {
-                    "type": "integer",
+                    "type": ["integer","string"],
                     "default": 1,
                     "description": "Number of skewed mixed normal populations"
                 },

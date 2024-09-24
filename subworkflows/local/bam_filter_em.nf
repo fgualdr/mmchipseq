@@ -54,14 +54,13 @@ workflow BAM_FILTER_EM {
             .bam_label
             .join(BAM_EM.out.final_bedpe, by: [0])
             .set { ch_em_bam }
-
         // Make a final BAM cleaned with unique mappers
         BAM_EM_OUT( ch_em_bam,
                     ch_chrom_sizes
                     ) 
-
         ch_versions = ch_versions.mix(BAM_EM_OUT.out.versions.first())
         ch_filter_bam = BAM_EM_OUT.out.bam
+
     } else {
         ch_filter_bam = BAM_FILTER.out.bam
     }

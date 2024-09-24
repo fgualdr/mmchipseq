@@ -48,8 +48,8 @@ process STAR_ALIGN {
         --readFilesIn $reads  \\
         --runThreadN $task.cpus \\
         --outFileNamePrefix $prefix. \\
-        --outFilterScoreMinOverLread 0.4 \\
-        --outFilterMatchNminOverLread 0.4 \\
+        --outFilterScoreMinOverLread 0.3 \\
+        --outFilterMatchNminOverLread 0.3 \\
         --outSAMattrIHstart 0 \\
         $filtermultimapnmax \\
         $outsammultinmax \\

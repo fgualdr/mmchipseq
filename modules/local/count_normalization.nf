@@ -33,7 +33,7 @@ process COUNT_NORM {
     def prefix    = task.ext.prefix ?: "${meta.id}"
     def norm = params.normalize ? 'TRUE' : 'FALSE'
     def sigma_times = params.sigma_times ? params.sigma_times : '1'
-    def n_pop = params.n_pop ? params.n_pop : '1'
+    def n_pop = params.n_pop ? params.n_pop : 'NULL'
 
     """ 
     general_normalizer.r \\

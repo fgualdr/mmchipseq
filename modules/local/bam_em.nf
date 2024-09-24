@@ -3,7 +3,7 @@
  */
 process BAM_EM {
     tag "$meta.id"
-    label 'process_high_memory'
+    label 'process_high'
 
     conda (params.enable_conda ? "" : null)
     container 'docker://fgualdr/empy'

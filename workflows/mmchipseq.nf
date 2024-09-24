@@ -172,7 +172,6 @@ workflow CHIPSEQ {
         )
         
         ch_versions = ch_versions.mix(FASTQ_FROM_SRA.out.versions)
-        ch_versions.view()
 
     } else if(ch_input){
 
@@ -205,7 +204,6 @@ workflow CHIPSEQ {
         
     }
 
-    ch_reads.view()
     //
     // SUBWORKFLOW: Read QC, extract UMI and trim adapters with TrimGalore!
     //

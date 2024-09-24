@@ -32,6 +32,16 @@ suppressPackageStartupMessages(library(ComplexHeatmap))
 ## PARSE COMMAND-LINE PARAMETERS              ##
 ################################################
 ################################################
+# Custom validation function
+validate_n_pop <- function(option, opt_str, value, parser) {
+  if (value == "NULL") {
+    return(value)
+  } else if (grepl("^[0-9]+$", value)) {
+    return(as.integer(value))
+  } else {
+    stop("Invalid value for n_pop. It must be an integer or 'NULL'.")
+  }
+}
 
 option_list <- list(
     make_option(c("-i", "--count_file"    ), type="character", default=NULL    , metavar="path"   , help="Count file matrix where rows are genes and columns are samples."                        ),
@@ -43,7 +53,7 @@ option_list <- list(
     make_option(c("-v", "--vst"           ), type="logical"  , default=FALSE   , metavar="boolean", help="Run vst transform instead of rlog."                                                     ),
     make_option(c("-n", "--norm"          ), type="logical"  , default=FALSE   , metavar="boolean", help="Normalize with the General Normalizer Library."                                         ),
     make_option(c("-s", "--sigma_times"   ), type="integer"  , default=1       , metavar="integer", help="Number of sigma times."                                                                 ),
-    make_option(c("-z", "--n_pop"          ), type="integer"  , default=1       , metavar="integer", help="Number of populations."                                                                 ),
+    make_option(c("-z", "--n_pop"         ), type="character", default="1"     , metavar="integer", help="Number of populations.", callback = validate_n_pop                                      ),
     make_option(c("-c", "--cores"         ), type="integer"  , default=1       , metavar="integer", help="Number of cores."                                                                       )
 )
 
@@ -121,11 +131,19 @@ if(opt$norm == TRUE){
     x_depth_p = x/colSums(x)*1000000
     # remove raws top 1% and bottom 1% based on rowMeans
     x = x[order(rowMeans(x_depth_p), decreasing = T),]
-    x = x[round(nrow(x)*0.0001)+1:round(nrow(x)*0.9999)-1,]
+    # we want to remove more from the lower end so we remove 0.01% from the top and 10% from the bottom
+    x = x[round(nrow(x)*0.0001):round(nrow(x)*0.9),]
 
     # Compute the normalization
     sigma_times = opt$sigma_times
     n_pop =    opt$n_pop
+    if(n_pop == "NULL"){n_pop = NULL}
+    if(is.null(n_pop)){
+        n_pop_ref = 1
+    }else{
+        n_pop_ref = n_pop
+    }
+    cat("Running Normalization with n_pop = ",n_pop,"\n")
     Result = RunNorm(   x,
                         design,
                         sigma_times = sigma_times,
@@ -133,7 +151,7 @@ if(opt$norm == TRUE){
                         row_name_index=rownames(x),
                         saving_path=save_folder_norm,
                         n_pop=n_pop,
-                        n_pop_reference=n_pop,
+                        n_pop_reference=n_pop_ref,
                         BiocParam=param
                         )
     
