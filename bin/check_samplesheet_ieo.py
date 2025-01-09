@@ -11,7 +11,6 @@ import re
 def parse_args(args=None):
     Description = "Reformat nf-core/chipseq samplesheet file and check its contents."
     Epilog = "Example usage: python check_samplesheet_ieo.py <FILE_IN> <FILE_OUT>"
-
     parser = argparse.ArgumentParser(description=Description, epilog=Epilog)
     parser.add_argument("FILE_IN", help="Input samplesheet file.")
     parser.add_argument("FILE_OUT", help="Output file.")
@@ -55,7 +54,9 @@ def check_samplesheet(file_in, file_out):
                 f"ERROR: Please check samplesheet header -> {','.join(header)} != {','.join(HEADER)}"
             )
             sys.exit(1)
-        ## Check sample entries
+        ## Check sample entries else line=fin.readline()
+        # to debug the file we can use the following:
+        # line=fin.readline()
         for line in fin:
             lspl = [x.strip().strip('"') for x in line.strip().split(",")]
             ## Check valid number of columns per row
@@ -115,12 +116,12 @@ def check_samplesheet(file_in, file_out):
             if any(x!='any' for (x) in lanes) and any(x.startswith('L00') for (x) in lanes) and any(x[-1].isdigit() for (x) in lanes):
                 print("Proceed with specified lanes:")
                 # in here we need to split by common partial match:
-                # Important the Lanes must be in the folder specified!
-
+                # We need to get any files with the extension in either curent or any subfolder
+                
                 subfolders = list(p.glob("*"+rid+"*"+sid+"*"))
+                
                 search = '*fastq.gz'
-                fastqs = list(subfolders[0].glob('./' + search))
-
+                fastqs = list(subfolders[0].glob('**/' + search))
                 if len(fastqs) == 0:
                     print_error(
                             f"The path provided does not contain the files as RID+SID",
@@ -131,9 +132,9 @@ def check_samplesheet(file_in, file_out):
                 for ll in lanes:
                     print(ll)
                     search = "*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
-                    fastqs_1 = list(subfolders[0].glob(search))
+                    fastqs_1 = list(subfolders[0].glob('**/' + search))
                     search = "*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
-                    fastqs_2 = list(subfolders[0].glob(search))
+                    fastqs_2 = list(subfolders[0].glob('**/' + search))
                     
                     # check if fastqs_1 is not empty
                     if len(fastqs_1) > 0:
@@ -172,7 +173,7 @@ def check_samplesheet(file_in, file_out):
                 # we need to get to the unique elements of "Lanes"
                 subfolders = list(p.glob("*"+rid+"*"+sid+"*"))
                 search = '*R1*fastq.gz'
-                fastqs = list(subfolders[0].glob('./' + search))
+                fastqs = list(subfolders[0].glob('**/' + search)) # to find recursively in all subfolders use: '**/' + search
                 fastqs = [ re.sub(r'^.*?_L', 'L', str(x)).split('_')[0] for x in fastqs]
                 
                 if len(fastqs) == 0:
@@ -185,9 +186,9 @@ def check_samplesheet(file_in, file_out):
                 for ll in fastqs:
                     print(ll)
                     search = "*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
-                    fastqs_1 = list(subfolders[0].glob(search))
+                    fastqs_1 = list(subfolders[0].glob('**/' + search))
                     search = "*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
-                    fastqs_2 = list(subfolders[0].glob(search))
+                    fastqs_2 = list(subfolders[0].glob('**/' + search))
                     
                     # check if fastqs_1 is not empty
                     if len(fastqs_1) > 0:
