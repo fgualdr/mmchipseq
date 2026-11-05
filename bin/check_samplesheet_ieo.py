@@ -75,6 +75,7 @@ def check_samplesheet(file_in, file_out):
                 )
             ## Check sample name entries
             rid,sid,sample,replicate,path,lanes,is_input,which_input,antibody = lspl[: len(HEADER)]
+            is_input = is_input.lower()
             sample=sample + "_" + replicate  # create a unique identifie
             
             print(sample)
@@ -108,44 +109,25 @@ def check_samplesheet(file_in, file_out):
             # the default is paired end sequencing at IEO
             # Given the way the crisper screen library is designed R1 and R2 must be present! Check:
             p=Path(path)
+            ## collect all files ending in .fastq.gz recursively:
+            all_fastq= list(p.glob('**/*.fastq.gz'))
             # here we consider the "lanes" in case issues associated to the NOVASeq lanes are present.
             # lanes can have values in any, or the L001, L002, ... 
             # Illumina outputs include: "_L002_R1_001.fastq.gz"
-            ## Create sample mapping dictionary = {sample: [[ single_end, fastq_1, fastq_2, input ]]}
+            ## Create sample mapping dictionary = {sample: [[ single_end, fastq_1, fastq_2, strandedness ]]}
             lanes=lanes.strip().split(":")
             if any(x!='any' for (x) in lanes) and any(x.startswith('L00') for (x) in lanes) and any(x[-1].isdigit() for (x) in lanes):
                 print("Proceed with specified lanes:")
-                # in here we need to split by common partial match:
-                # We need to get any files with the extension in either curent or any subfolder
-                
-                subfolders = list(p.glob("*"+rid+"*"+sid+"*"))
-                
-                search = '*fastq.gz'
-                fastqs = list(subfolders[0].glob('**/' + search))
-                if len(fastqs) == 0:
-                    print_error(
-                            f"The path provided does not contain the files as RID+SID",
-                            "path:",
-                            path
-                        )
                 
                 for ll in lanes:
-                    print(ll)
-                    search = "*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
-                    fastqs_1 = list(subfolders[0].glob('**/' + search))
-                    search = "*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
-                    fastqs_2 = list(subfolders[0].glob('**/' + search))
+
+                    # Create the pattern directly
+                    search_pattern1 = f"**/*{rid}*{sid}*{ll}*_R1*fastq.gz"
+                    # Use glob directly
+                    fastqs_1 = list(p.glob(search_pattern1))
                     
-                    # check if fastqs_1 is not empty
-                    if len(fastqs_1) > 0:
-                        print("Found", len(fastqs_1), "files matching the pattern.")
-                    else:
-                        print("No files found matching the pattern.")
-                    # check if fastqs_2 is not empty
-                    if len(fastqs_2) > 0:
-                        print("Found", len(fastqs_2), "files matching the pattern.")
-                    else:
-                        print("No files found matching the pattern.")
+                    search_pattern2 = f"**/*{rid}*{sid}*{ll}*_R2*fastq.gz"
+                    fastqs_2 = list(p.glob(search_pattern2))
                     
                     ## Auto-detect paired-end/single-end
                     sample_info = []  ## [single_end, fastq_1, fastq_2, strandedness]
@@ -159,23 +141,24 @@ def check_samplesheet(file_in, file_out):
                     # for each we append:
                     if sample not in sample_mapping_dict:
                         sample_mapping_dict[sample] = [sample_info]
-                        print(sample,sample_info)
                     else:
                         if sample_info in sample_mapping_dict[sample]: 
                             print_error("Samplesheet contains duplicate rows!", "Line", line)
                         else:
                             print("append")
                             sample_mapping_dict[sample].append(sample_info)
-                            print(sample,sample_info)
-                            
             elif all(x=='any' for (x) in lanes):
                 print("Proceed with all lanes:")
-                # we need to get to the unique elements of "Lanes"
-                subfolders = list(p.glob("*"+rid+"*"+sid+"*"))
-                search = '*R1*fastq.gz'
-                fastqs = list(subfolders[0].glob('**/' + search)) # to find recursively in all subfolders use: '**/' + search
-                fastqs = [ re.sub(r'^.*?_L', 'L', str(x)).split('_')[0] for x in fastqs]
                 
+                # Create the pattern directly
+                search_pattern1 = f"**/*{rid}*{sid}*_R1*fastq.gz"
+                # Use glob directly
+                fastqs_1 = list(p.glob(search_pattern1))
+
+                # As are any we remove all text after the _R1 so we keep all the text of the path until the _R 
+                #fastqs = [ re.sub(r'^.*?_L', 'L', str(x)).split('_')[0] for x in fastqs]
+                fastqs = [x.name.rsplit("_R", 1)[0] for x in fastqs_1]
+
                 if len(fastqs) == 0:
                     print_error(
                             f"The path provided does not contain the files as RID+SID",
@@ -185,11 +168,12 @@ def check_samplesheet(file_in, file_out):
                     
                 for ll in fastqs:
                     print(ll)
-                    search = "*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
-                    fastqs_1 = list(subfolders[0].glob('**/' + search))
-                    search = "*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
-                    fastqs_2 = list(subfolders[0].glob('**/' + search))
-                    
+                    #"*"+rid+"*"+sid+'*'+
+                    search1 = f"**/*{ll}*_R1*fastq.gz"
+                    fastqs_1 = list(p.glob(search1))
+                    search2 = f"**/*{ll}*_R2*fastq.gz"
+                    fastqs_2 = list(p.glob(search2))
+
                     # check if fastqs_1 is not empty
                     if len(fastqs_1) > 0:
                         print("Found", len(fastqs_1), "files matching the pattern.")
@@ -200,7 +184,7 @@ def check_samplesheet(file_in, file_out):
                         print("Found", len(fastqs_2), "files matching the pattern.")
                     else:
                         print("No files found matching the pattern.")
-                    
+
                     ## Auto-detect paired-end/single-end
                     sample_info = []  ## [single_end, fastq_1, fastq_2, strandedness]
                     if sample and len(fastqs_1) !=0 and len(fastqs_2) !=0:  ## Paired-end short reads
@@ -213,23 +197,17 @@ def check_samplesheet(file_in, file_out):
                     # for each we append:
                     if sample not in sample_mapping_dict:
                         sample_mapping_dict[sample] = [sample_info]
-                        print(sample,sample_info)
                     else:
                         if sample_info in sample_mapping_dict[sample]: 
                             print_error("Samplesheet contains duplicate rows!", "Line", line)
                         else:
                             print('append')
                             sample_mapping_dict[sample].append(sample_info)
-                            print(sample,sample_info)
-                
             else:
                 print(lanes)
                 print_error(
-                    f"The lane  format must by either any or in the from L00* with multiple lanes separate by : check sample sheet!"
+                    f"The lane format must by either any or in the from L00* with multiple lanes separate by : check sample sheet!"
                 )
-    
-    for key in sample_mapping_dict:
-        print("Dict keys: ",key)
     
     ## Write validated samplesheet with appropriate columns
     if len(sample_mapping_dict) > 0:
@@ -259,8 +237,8 @@ def check_samplesheet(file_in, file_out):
                         sample,
                     )
                 for idx, val in enumerate(sample_mapping_dict[sample]):
-                    control = val[-2] # the which_input
-                    if control != 'false' and control not in sample_mapping_dict.keys():
+                    control = val[-2] # control could be false or FALSE so add control.lower() to check
+                    if control.lower() != 'false' and control not in sample_mapping_dict.keys():
                         print_error(
                             f"Control identifier has to match a provided sample identifier!",
                             "Control",

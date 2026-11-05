@@ -42,7 +42,7 @@ process MACS2_CALLPEAK_MERGED {
         --gsize $macs2_gsize \\
         --format $format \\
         --name $prefix \\
-        --treatment ${ipbam.join(' ')} \\ 
+        --treatment ${ipbam.join(' ')} \\
         $control
 
     cat <<-END_VERSIONS > versions.yml

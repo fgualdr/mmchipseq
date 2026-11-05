@@ -25,8 +25,8 @@ def create_fastq_channel(LinkedHashMap row) {
     def meta = [:]
     meta.id         = row.sample
     meta.single_end = row.single_end.toBoolean()
-    meta.is_input   = row.is_input.toBoolean()
-    meta.which_input   = row.which_input.toBoolean()
+    meta.is_input   = row.is_input.toBoolean() // to make it lower case before boolean: row.is_input
+    meta.which_input   = row.which_input
     meta.antibody   = row.antibody
 
     // add path(s) of the fastq file(s) to the meta map

@@ -4,8 +4,7 @@ process COUNT_NORM {
 
     // (Bio)conda packages have intentionally not been pinned to a specific version
     // This was to avoid the pipeline failing due to package conflicts whilst creating the environment when using -profile conda
-    conda (params.enable_conda ? "conda-forge::r-base bioconda::bioconductor-deseq2 bioconda::bioconductor-biocparallel bioconda::bioconductor-tximport bioconda::bioconductor-complexheatmap conda-forge::r-optparse conda-forge::r-ggplot2 conda-forge::r-rcolorbrewer conda-forge::r-pheatmap" : null)
-    container 'docker://fgualdr/envnorm_fix'
+    container 'docker://fgualdr/omninorm'
 
     input:
     tuple val(meta), path(counts)

@@ -119,7 +119,7 @@ include { DEEPTOOLS_PLOTHEATMAP         } from '../modules/nf-core/modules/deept
 include { DEEPTOOLS_PLOTFINGERPRINT     } from '../modules/nf-core/modules/deeptools/plotfingerprint/main'
 include { KHMER_UNIQUEKMERS             } from '../modules/nf-core/modules/khmer/uniquekmers/main'
 include { MACS2_CALLPEAK as MACS2_CALLPEAK_SINGLE          } from '../modules/nf-core/modules/macs2/callpeak/main'
-include { MACS2_CALLPEAK as MACS2_CALLPEAK_MERGED          } from '../modules/nf-core/modules/macs2/callpeak/main'
+include { MACS2_CALLPEAK_MERGED } from '../modules/local/macs2_callpeaks_merged'
 include { SUBREAD_FEATURECOUNTS         } from '../modules/nf-core/modules/subread/featurecounts/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/modules/custom/dumpsoftwareversions/main'
 
@@ -297,8 +297,6 @@ workflow CHIPSEQ {
                 [ it[0], it[1].flatten() ] 
         }
         .set { ch_sort_bam }
-    
-    ch_sort_bam.view()
 
     PICARD_MERGESAMFILES (
         ch_sort_bam
@@ -400,18 +398,30 @@ workflow CHIPSEQ {
                 meta, bam1, bam2 ->
                 def new_meta = meta.clone()
                 new_meta.id =  meta.antibody
-                [new_meta, bam1, bam2]
+                new_meta.single_end =  meta.single_end
+                new_meta.is_input =  false
+                new_meta.which_input = false
+                new_meta.antibody =  meta.antibody
+                [new_meta, bam1, []]
             }
             .groupTuple(by: 0)
             .map {
                 meta, bam1, bam2 ->
-                    [ meta , bam1, [] ]
+                def bam1_new = bam1.flatten().unique().sort()
+                def bam2_new = bam2.flatten().unique().sort()
+                [ meta , bam1_new, [] ]
             }
             .set { ch_antibody_bam }
-            
-            ch_antibody_bam.view()
+
+
+        // print the ch_antibody_bam content
+        println "check ch_ip_control_bam: "
+        ch_ip_control_bam.view()
+        println "check ch_antibody_bam: "
+        ch_antibody_bam.view()
         
     }else{ 
+
         println "The value of ch_with_inputs set to with the input: ${ch_with_inputs}"
 
         ch_genome_bam_bai
@@ -423,22 +433,36 @@ workflow CHIPSEQ {
         .set { ch_ip_control_bam } 
 
         // w inputs we simply merge all bams by antibody: from meta,bam,bai - we combine the samples and the inputs:
-        // we start from the paired and we group it:
+        // we start from the paired and we group it:        
         ch_ip_control_bam
             .map {
                 meta, bam1, bam2 ->
                 def new_meta = meta.clone()
                 new_meta.id =  meta.antibody
+                new_meta.single_end =  meta.single_end
+                new_meta.is_input =  false
+                new_meta.which_input = false
+                new_meta.antibody =  meta.antibody
                 [new_meta, bam1, bam2]
             }
             .groupTuple(by: 0)
             .map {
                 meta, bam1, bam2 ->
-                    [ meta , bam1, bam2 ]
+                def bam1_new = bam1.flatten().unique().sort()
+                def bam2_new = bam2.flatten().unique().sort()
+                [ meta , bam1_new, bam2_new ]
             }
             .set { ch_antibody_bam }
 
+        // print the ch_antibody_bam content
+        println "check ch_ip_control_bam: "
+        ch_ip_control_bam.view()
+
+        println "check ch_antibody_bam:  "
+        ch_antibody_bam.view()
+
     }
+    
     // 
     // MODULE: Calculute genome size with khmer
     //
@@ -476,6 +500,8 @@ workflow CHIPSEQ {
         .set { ch_macs2_peaks }
 
     // If is narrow we call high conf summits by merging all BAMS:
+    // for this step we collect all bams not input as samples and all those input as controls:
+    
 
     MACS2_CALLPEAK_MERGED(
         ch_antibody_bam,
@@ -659,48 +685,7 @@ workflow CHIPSEQ {
         ch_saf_bams
     )
     ch_subreadfeaturecounts_multiqc = SUBREAD_FEATURECOUNTS.out.summary
-    ch_versions = ch_versions.mix(SUBREAD_FEATURECOUNTS.out.versions.first())
-
-    //
-    // Normalize samples with Gualdrini et al. 2016 Method compute scaling factor and generate a channel - [meta , bam, scaling]
-    // Here we compute the scaling factor used to normalize the counts and the bigWigs
-    // Generate counts as SUBREAD so norm counts rounded for DESEQ2 to work
-    // out has: counts, scalings, 
-    //
-    // MODULE: Compute normalization and quality plots:
-    //
-    COUNT_NORM (
-        SUBREAD_FEATURECOUNTS.out.counts,
-        ch_deseq2_pca_header,
-        ch_deseq2_clustering_header
-    )
-    ch_deseq2_pca_multiqc        = COUNT_NORM.out.pca_multiqc
-    ch_deseq2_clustering_multiqc = COUNT_NORM.out.dists_multiqc
-    
-    COUNT_NORM
-        .out
-        .noamlization_txt
-        .splitCsv ( header:true, sep:'\t' )
-        .map { row -> 
-            def id = row.Sample_ID
-            def value = row.scaling
-            [ id, value ]
-        }
-        .set { ch_size_factors }
-
-    // Assemble the channel 
-    // Given a tab separated matrix with the first column : Sample_id, Scaling_factor convert the matrix to a channel with [Sample_id, Scaling_factor] pairs
-    // Consider that the first line is the header - in principle Sample_id must match the meta.id from BAM_FILTER_EM.out.bam    
-
-    ch_genome_bam_bai
-        .combine(ch_size_factors)
-        .map { 
-            meta1, bam1, bai1, id2, scaling2 ->
-                meta1.id == id2 ? [ meta1, bam1, bai1 ,scaling2] : null
-        }
-        .set { ch_bam_bai_scale } 
-        
-    ch_bam_bai_scale.view()
+    ch_versions = ch_versions.mix(SUBREAD_FEATURECOUNTS.out.versions.first())        
 
     ch_deeptoolsplotprofile_multiqc = Channel.empty()
     // DEEPTOOLS_BIGWIG_NORM.out.bigwig && !DEEPTOOLS_BIGWIG_NORM.out.bigwig.ifEmpty([])
@@ -715,6 +700,46 @@ workflow CHIPSEQ {
     ch_big_wig = DEEPTOOLS_BIGWIG.out.bigwig
 
     if ( params.normalize ) {
+
+        //
+        // Normalize samples with Gualdrini et al. 2016 Method compute scaling factor and generate a channel - [meta , bam, scaling]
+        // Here we compute the scaling factor used to normalize the counts and the bigWigs
+        // Generate counts as SUBREAD so norm counts rounded for DESEQ2 to work
+        // out has: counts, scalings, 
+        //
+        // MODULE: Compute normalization and quality plots:
+        //
+        COUNT_NORM (
+            SUBREAD_FEATURECOUNTS.out.counts,
+            ch_deseq2_pca_header,
+            ch_deseq2_clustering_header
+        )
+        ch_deseq2_pca_multiqc        = COUNT_NORM.out.pca_multiqc
+        ch_deseq2_clustering_multiqc = COUNT_NORM.out.dists_multiqc
+
+        COUNT_NORM
+            .out
+            .noamlization_txt
+            .splitCsv ( header:true, sep:'\t' )
+            .map { row -> 
+                def id = row.Sample_ID
+                def value = row.scaling
+                [ id, value ]
+            }
+            .set { ch_size_factors }
+
+        // Assemble the channel 
+        // Given a tab separated matrix with the first column : Sample_id, Scaling_factor convert the matrix to a channel with [Sample_id, Scaling_factor] pairs
+        // Consider that the first line is the header - in principle Sample_id must match the meta.id from BAM_FILTER_EM.out.bam    
+
+        ch_genome_bam_bai
+            .combine(ch_size_factors)
+            .map { 
+                meta1, bam1, bai1, id2, scaling2 ->
+                    meta1.id == id2 ? [ meta1, bam1, bai1 ,scaling2] : null
+            }
+            .set { ch_bam_bai_scale } 
+
         //
         // MODULE: BedGraph coverage tracks.
         //
@@ -775,20 +800,24 @@ workflow CHIPSEQ {
             ch_multiqc_custom_config.collect().ifEmpty([]),
             CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect(),
             ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'),
-
+            
+            // FASTQC:
             ch_fastqc_raw_multiqc.collect{it[1]}.ifEmpty([]),
             ch_fastqc_trim_multiqc.collect{it[1]}.ifEmpty([]),
             ch_trim_log_multiqc.collect{it[1]}.ifEmpty([]),
-
+            
+            // STAR alignment:
             ch_samtools_stats.collect{it[1]}.ifEmpty([]),
             ch_samtools_flagstat.collect{it[1]}.ifEmpty([]),
             ch_samtools_idxstats.collect{it[1]}.ifEmpty([]),
 
+            // Marks duplicates:
             MARK_DUPLICATES_PICARD.out.stats.collect{it[1]}.ifEmpty([]),
             MARK_DUPLICATES_PICARD.out.flagstat.collect{it[1]}.ifEmpty([]),
             MARK_DUPLICATES_PICARD.out.idxstats.collect{it[1]}.ifEmpty([]),
             MARK_DUPLICATES_PICARD.out.metrics.collect{it[1]}.ifEmpty([]),
 
+            // BAM filtering:
             BAM_FILTER_EM.out.stats.collect{it[1]}.ifEmpty([]),
             BAM_FILTER_EM.out.flagstat.collect{it[1]}.ifEmpty([]),
             BAM_FILTER_EM.out.idxstats.collect{it[1]}.ifEmpty([]),
